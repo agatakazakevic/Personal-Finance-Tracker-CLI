@@ -1,7 +1,32 @@
 ﻿
 using System.Text.Json;
-internal class Program
+
+public class Program
 {
+    public static decimal ValidateAmount(string? amount)
+    {
+        if (string.IsNullOrWhiteSpace(amount))
+        {
+            throw new ArgumentException("Amount is required");
+        }
+        if (!decimal.TryParse(amount, out decimal parsedAmount))
+        {
+            throw new ArgumentException("Invalid amount: must be a number");
+        }
+        if (parsedAmount <= 0)
+        {
+            throw new ArgumentException("Invalid amount: must be greater than zero");
+        }
+        return parsedAmount;
+    }
+    public static string ValidateDescription(string? desc)
+    {
+        if (string.IsNullOrWhiteSpace(desc))
+        {
+            throw new ArgumentException("Description cannot be empty");
+        }
+        return desc;
+    }
     private static void Main(string[] args)
     {
         if (args.Length == 0)
@@ -36,46 +61,42 @@ internal class Program
                 string? desc = GetFlagValue(args, "--desc");
                 string? type = GetFlagValue(args, "--type") ?? "expense";
                 string? date = GetFlagValue(args, "--date") ?? DateTime.Now.ToString("yyyy-MM-dd");
-                if (amount ==null || category==null || desc==null)
-                {
-                    Console.Error.WriteLine("Missing required flag: --amount, --category, and --desc are required");
-                    Environment.Exit(1);
-                }
-                if (!decimal.TryParse(amount, out decimal parsedAmount))
-                {
-                    Console.Error.WriteLine("Invalid amount, must be a number");
-                    Environment.Exit(1);
-                }
-                if (string.IsNullOrWhiteSpace(desc) )
-                {
-                    Console.Error.WriteLine("Description cannot be empty");
-                    Environment.Exit(1);
-                }
-                if (parsedAmount <= 0)
-                {
-                    Console.Error.WriteLine("Invalid amount, must be greater than zero");
-                    Environment.Exit(1);
-                }  
                 
-                var transaction = new Transaction{
+                try
+                {
+                    decimal parsedAmount = ValidateAmount(amount);
+                    string validDesc = ValidateDescription(desc);
+                    if (string.IsNullOrWhiteSpace(category))
+                    {
+                        Console.Error.WriteLine("Category is required");
+                        Environment.Exit(1);
+                    }
+                    
+                    var transaction = new Transaction{
                         Id = transactions.Count + 1,
                         Amount = parsedAmount,
                         Category = category,
-                        Description = desc,
+                        Description = validDesc,
                         Type = type,
                         Date = date
-                    };
-                transactions.Add(transaction);
+                        };
+                    transactions.Add(transaction);
 
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                string updatedJson = JsonSerializer.Serialize(transactions, options);
-                File.WriteAllText(dataFile, updatedJson);
-                Console.WriteLine($"Amount: {parsedAmount} | Category: {category} | Desc: {desc} | Type: {type} | Date: {date}");
+                    var options = new JsonSerializerOptions { WriteIndented = true };
+                    string updatedJson = JsonSerializer.Serialize(transactions, options);
+                    File.WriteAllText(dataFile, updatedJson);
+                    Console.WriteLine($"Amount: {parsedAmount} | Category: {category} | Desc: {validDesc} | Type: {type} | Date: {date}");
+                }
+                catch (ArgumentException ex)
+                {
+                    Console.Error.WriteLine(ex.Message);
+                    Environment.Exit(1);
+                }
+                
                 break;
-
             case "list":
-                Console.WriteLine($"  {"ID",4}  {"Date",-10}  {"Type",-7}  {"Category",-10}  {"Amount",8}  {"Description"}");
-                Console.WriteLine($"  {"--",4}  {"----------",-10}  {"-------",-7}  {"----------",-10}  {"------",8}  {"-----------"}");
+                Console.WriteLine("  ID    Date        Type     Category    Amount    Description");
+                Console.WriteLine("  --    ----------  -------  ----------  ------    -----------");
 
                 decimal totalIncome = 0;
                 decimal totalExpenses = 0;
@@ -93,7 +114,12 @@ internal class Program
 }
                     string amountStr = $"{prefix}{t.Amount:F2}";
 
-                    Console.WriteLine($"  {t.Id,4}  {t.Date,-10}  {t.Type,-7}  {t.Category,-10}  {amountStr,8}  {t.Description}");
+                    Console.WriteLine("  " + t.Id.ToString().PadLeft(2) + "    "
+                    + t.Date.PadRight(12)
+                    + t.Type.PadRight(9)
+                    + t.Category.PadRight(12)
+                    + amountStr.PadLeft(8) + "  "
+                    + t.Description);
 
                     if (t.Type == "income")
                         totalIncome += t.Amount;
