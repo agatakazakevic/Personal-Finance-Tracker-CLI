@@ -1,0 +1,18 @@
+[
+  {
+    "Id": 1,
+    "Amount": 45.50,
+    "Category": "Food",
+    "Description": "Groceries",
+    "Type": "expense",
+    "Date": "2026-05-02"
+  },
+  {
+    "Id": 2,
+    "Amount": 2500,
+    "Category": "Salary",
+    "Description": "Monthly salary",
+    "Type": "income",
+    "Date": "2026-05-02"
+  }
+]
