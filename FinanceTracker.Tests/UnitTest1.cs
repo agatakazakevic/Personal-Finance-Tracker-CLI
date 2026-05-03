@@ -12,8 +12,6 @@ public class Tests
     {
         Assert.Pass();
     }
-    public class ValidationTests
-    {
     [Test]
     public void ValidateAmount_RejectsNegative()
     {
@@ -70,4 +68,4 @@ public class Tests
         Assert.That(result, Is.EqualTo("Groceries"));
     }
 }
-}
+

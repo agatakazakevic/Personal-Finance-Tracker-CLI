@@ -71,15 +71,18 @@ public class Program
                         Console.Error.WriteLine("Category is required");
                         Environment.Exit(1);
                     }
-                    
-                    var transaction = new Transaction{
-                        Id = transactions.Count + 1,
-                        Amount = parsedAmount,
-                        Category = category,
-                        Description = validDesc,
-                        Type = type,
-                        Date = date
-                        };
+
+                    TransactionType parsedType;
+                    if (type == "income")
+                    {
+                        parsedType = TransactionType.Income;
+                    }
+                    else
+                    {
+                        parsedType = TransactionType.Expense;
+                    }
+                    var transaction = new Transaction(parsedAmount, category, validDesc, parsedType, date);
+                    transaction.Id = transactions.Count + 1;
                     transactions.Add(transaction);
 
                     var options = new JsonSerializerOptions { WriteIndented = true };
@@ -104,24 +107,27 @@ public class Program
                 foreach (var t in transactions)
                 {
                     string prefix;
-                    if (t.Type == "income")
+                    
+                    if (t.Type == TransactionType.Income)
                     {
                         prefix = "+";
                     }
                     else
                     {
                         prefix = "-";
-}
+                    }
+
+
                     string amountStr = $"{prefix}{t.Amount:F2}";
 
                     Console.WriteLine("  " + t.Id.ToString().PadLeft(2) + "    "
                     + t.Date.PadRight(12)
-                    + t.Type.PadRight(9)
+                    + t.Type.ToString().PadRight(9)
                     + t.Category.PadRight(12)
                     + amountStr.PadLeft(8) + "  "
                     + t.Description);
 
-                    if (t.Type == "income")
+                    if (t.Type == TransactionType.Income)
                         totalIncome += t.Amount;
                     else
                         totalExpenses += t.Amount;
