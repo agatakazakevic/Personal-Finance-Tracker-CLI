@@ -1,5 +1,4 @@
-﻿
-using System.Text.Json;
+﻿using System.Text.Json;
 
 public class Program
 {
@@ -82,7 +81,26 @@ public class Program
                         parsedType = TransactionType.Expense;
                     }
                     var transaction = new Transaction(parsedAmount, category, validDesc, parsedType, date);
-                    transaction.Id = transactions.Count + 1;
+
+                    //if we delete id, it always gets refilled
+                    int NextId;
+                    if (transactions.Count > 0)
+                    {
+                        int maxId = 0;
+                        foreach (var t in transactions)
+                        {
+                            if (t.Id > maxId)
+                            {
+                                maxId = t.Id;
+                            }
+                        }
+                        NextId = maxId + 1;
+                    }
+                    else
+                    {
+                        NextId = 1;
+                    }
+                    transaction.Id = NextId;
                     transactions.Add(transaction);
 
                     var options = new JsonSerializerOptions { WriteIndented = true };
@@ -160,6 +178,126 @@ public class Program
                 Console.WriteLine("  list    List all transactions");
                 Console.WriteLine("  help    Show this help message");
                 break;
+            case "delete":
+                string? id = GetFlagValue(args, "--id");
+                if (!int.TryParse(id, out int parsedId))
+                {
+                    Console.Error.WriteLine("Invalid or missing ID");
+                    Environment.Exit(1);
+                }
+                else
+                {
+                    Transaction? found = null;
+                    foreach(var item in transactions)
+                    {
+                        if (item.Id == parsedId)
+                        {
+                            found=item;
+                            break;
+                            
+                        }
+                    }
+                    if (found == null)
+                    {
+                        Console.Error.WriteLine($"Transaction with ID {parsedId} not found");
+                        Environment.Exit(1);
+                    }
+                    else
+                    {
+                        transactions.Remove(found);
+                        var deleteOptions = new JsonSerializerOptions { WriteIndented = true };
+                        string deleteJson = JsonSerializer.Serialize(transactions, deleteOptions);
+                        File.WriteAllText(dataFile, deleteJson);
+                        Console.WriteLine($"Deleted transaction ID {parsedId}");
+                        
+                    }
+                    
+
+                }
+                break;
+            case "edit":
+                string? editId = GetFlagValue(args, "--id");
+                if (!int.TryParse(editId, out int editParsedId))
+                {
+                    Console.Error.WriteLine("Invalid or missing ID");
+                    Environment.Exit(1);
+                }
+                Transaction? editfound = null;
+                foreach(var item in transactions)
+                {
+                    if (item.Id == editParsedId)
+                    {
+                        editfound=item;
+                        break;
+                            
+                    }
+                }
+                if (editfound == null)
+                {
+                    Console.Error.WriteLine($"Transaction with ID {editParsedId} not found");
+                    Environment.Exit(1);
+                }
+                else 
+                    {
+                        
+                        string? newAmount = GetFlagValue(args, "--amount");
+                        string? newCategory = GetFlagValue(args, "--category");
+                        string? newDesc = GetFlagValue(args, "--desc");
+                        string? newType = GetFlagValue(args, "--type");
+                        string? newDate = GetFlagValue(args, "--date");
+
+                        if (newAmount != null)
+                        {
+                            if (!decimal.TryParse(newAmount, out decimal newAmountParsed))
+                                {
+                                    Console.Error.WriteLine("Invalid amount: must be a number");
+                                    Environment.Exit(1);
+                                }
+                            else
+                            {
+                                editfound.Amount=newAmountParsed;
+                            }
+
+                        }
+                        if (newDesc != null)
+                        {
+                                editfound.Description=newDesc;
+                            
+                        }
+                        if (newCategory != null)
+                        {
+                                editfound.Category=newCategory;
+                        }
+                        if (newType != null)
+                        {
+                            if (Enum.TryParse<TransactionType>(newType, true, out TransactionType parsedNewType))
+                            {
+                                editfound.Type = parsedNewType;
+                            }
+                            else
+                            {
+                                Console.Error.WriteLine("Invalid type: must be 'income' or 'expense'");
+                                Environment.Exit(1);
+                            }
+                        }
+                        if (newDate != null)
+                        {
+                                editfound.Date=newDate;
+                        }
+
+                        // ... same for category, type, date
+
+                        // Save to file and print confirmation
+                        var deleteOptions = new JsonSerializerOptions { WriteIndented = true };
+                        string deleteJson = JsonSerializer.Serialize(transactions, deleteOptions);
+                        File.WriteAllText(dataFile, deleteJson);
+                        Console.WriteLine($"Edited transaction ID {editParsedId}");
+                        
+                    }
+                    break;
+
+
+
             default:
                 Console.Error.WriteLine($"Unknown command: '{command}'. Run 'help' for usage.");
                 Environment.Exit(1);
