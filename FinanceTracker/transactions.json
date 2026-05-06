@@ -1,26 +1,21 @@
-[
-  {
-    "Id": 1,
-    "Amount": 10,
-    "Category": "Food",
-    "Description": "First",
-    "Type": "Expense",
-    "Date": "2026-05-06"
-  },
-  {
-    "Id": 2,
-    "Amount": 20,
-    "Category": "Food",
-    "Description": "Second",
-    "Type": "Expense",
-    "Date": "2026-05-06"
-  },
-  {
-    "Id": 3,
-    "Amount": 40,
-    "Category": "Food",
-    "Description": "Fourth",
-    "Type": "Expense",
-    "Date": "2026-05-06"
-  }
-]
+{
+  "NextId": 4,
+  "Transactions": [
+    {
+      "Id": 1,
+      "Amount": 10,
+      "Category": "Food",
+      "Description": "First",
+      "Type": "Expense",
+      "Date": "2026-05-06"
+    },
+    {
+      "Id": 3,
+      "Amount": 30,
+      "Category": "Food",
+      "Description": "Third",
+      "Type": "Expense",
+      "Date": "2026-05-06"
+    }
+  ]
+}

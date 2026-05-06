@@ -4,7 +4,7 @@ public class TransactionStore
 {
     private List<Transaction> transactions = new List<Transaction>();//never null, gets overwritten with load()
     private string dataFile;
-    private int nextId;
+    private int nextId = 1;
 
     public TransactionStore(string dataFile)
     {
@@ -51,7 +51,12 @@ public class TransactionStore
 
     public void Save()
     {
-        string json = JsonSerializer.Serialize(transactions, jsonOptions);
+        var data = new StoreData
+        {
+            NextId = nextId,
+            Transactions = transactions
+        };
+        string json = JsonSerializer.Serialize(data, jsonOptions);
         File.WriteAllText(dataFile, json);
 
     }
@@ -61,29 +66,11 @@ public class TransactionStore
         if (File.Exists(dataFile))
         {
             string json = File.ReadAllText(dataFile);
-            var result = JsonSerializer.Deserialize<List<Transaction>>(json, jsonOptions);
-            if (result != null)
-                transactions = result;
-            else
-                transactions = new List<Transaction>();
-        }
-        else
-        {
-            transactions = new List<Transaction>();
-        }
-        if (transactions.Count > 0)
-        {
-            int maxId = 0;
-            foreach (var t in transactions)
-            {
-                if (t.Id > maxId)
-                    maxId = t.Id;
+            var result = JsonSerializer.Deserialize<StoreData>(json, jsonOptions);
+            if (result != null){
+                transactions = result.Transactions;
+                nextId = result.NextId;
             }
-            nextId = maxId + 1;
-        }
-        else
-        {
-            nextId = 1;
         }
     }
     private JsonSerializerOptions jsonOptions = new JsonSerializerOptions 
