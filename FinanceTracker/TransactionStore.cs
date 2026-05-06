@@ -1,38 +1,21 @@
 using System.Text.Json;
-
+using System.Text.Json.Serialization;
 public class TransactionStore
 {
-    private List<Transaction> transactions;
+    private List<Transaction> transactions = new List<Transaction>();//never null, gets overwritten with load()
     private string dataFile;
+    private int nextId;
 
     public TransactionStore(string dataFile)
     {
         this.dataFile=dataFile;
+        Load();
     }
 
     public void Add(Transaction transaction)
     {
-        //assign next id
-        //add to list
-        //save to file
-        int NextId;
-        if (transactions.Count > 0)
-            {
-                int maxId = 0;
-                foreach (var t in transactions)
-                {
-                    if (t.Id > maxId)
-                        {
-                            maxId = t.Id;
-                        }
-                }
-                    NextId = maxId + 1;
-            }
-        else
-        {
-            NextId = 1;
-        }
-        transaction.Id = NextId;
+        transaction.Id = nextId;
+        nextId++;
         transactions.Add(transaction);
         Save();
 
@@ -66,11 +49,10 @@ public class TransactionStore
         return transactions;
     }
 
-    private void Save()
+    public void Save()
     {
-        var Options = new JsonSerializerOptions { WriteIndented = true };
-        string Json = JsonSerializer.Serialize(transactions, Options);
-        File.WriteAllText(dataFile, Json);
+        string json = JsonSerializer.Serialize(transactions, jsonOptions);
+        File.WriteAllText(dataFile, json);
 
     }
 
@@ -79,7 +61,7 @@ public class TransactionStore
         if (File.Exists(dataFile))
         {
             string json = File.ReadAllText(dataFile);
-            var result = JsonSerializer.Deserialize<List<Transaction>>(json);
+            var result = JsonSerializer.Deserialize<List<Transaction>>(json, jsonOptions);
             if (result != null)
                 transactions = result;
             else
@@ -89,7 +71,26 @@ public class TransactionStore
         {
             transactions = new List<Transaction>();
         }
+        if (transactions.Count > 0)
+        {
+            int maxId = 0;
+            foreach (var t in transactions)
+            {
+                if (t.Id > maxId)
+                    maxId = t.Id;
+            }
+            nextId = maxId + 1;
+        }
+        else
+        {
+            nextId = 1;
+        }
     }
+    private JsonSerializerOptions jsonOptions = new JsonSerializerOptions 
+    { 
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() }
+    };
 
 
 

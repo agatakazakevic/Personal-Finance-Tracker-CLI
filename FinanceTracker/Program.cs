@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 
+
 public class Program
 {
     public static decimal ValidateAmount(string? amount)
@@ -35,21 +36,7 @@ public class Program
             return;
         }
         string command = args[0].ToLower();
-        string dataFile = "transactions.json";
-        List<Transaction> transactions;
-        if (File.Exists(dataFile))
-        {
-            string json = File.ReadAllText(dataFile);
-            var result = JsonSerializer.Deserialize<List<Transaction>>(json);
-            if (result != null)
-                transactions = result;
-            else
-                transactions = new List<Transaction>();
-        }
-        else
-        {
-            transactions = new List<Transaction>();
-        }
+        var store = new TransactionStore("transactions.json");
         switch (command)
         {
             
@@ -81,31 +68,7 @@ public class Program
                         parsedType = TransactionType.Expense;
                     }
                     var transaction = new Transaction(parsedAmount, category, validDesc, parsedType, date);
-
-                    //if we delete id, it always gets refilled
-                    int NextId;
-                    if (transactions.Count > 0)
-                    {
-                        int maxId = 0;
-                        foreach (var t in transactions)
-                        {
-                            if (t.Id > maxId)
-                            {
-                                maxId = t.Id;
-                            }
-                        }
-                        NextId = maxId + 1;
-                    }
-                    else
-                    {
-                        NextId = 1;
-                    }
-                    transaction.Id = NextId;
-                    transactions.Add(transaction);
-
-                    var options = new JsonSerializerOptions { WriteIndented = true };
-                    string updatedJson = JsonSerializer.Serialize(transactions, options);
-                    File.WriteAllText(dataFile, updatedJson);
+                    store.Add(transaction);
                     Console.WriteLine($"Amount: {parsedAmount} | Category: {category} | Desc: {validDesc} | Type: {type} | Date: {date}");
                 }
                 catch (ArgumentException ex)
@@ -121,7 +84,7 @@ public class Program
 
                 decimal totalIncome = 0;
                 decimal totalExpenses = 0;
-
+                var transactions = store.GetAll();
                 foreach (var t in transactions)
                 {
                     string prefix;
@@ -185,36 +148,17 @@ public class Program
                     Console.Error.WriteLine("Invalid or missing ID");
                     Environment.Exit(1);
                 }
-                else
-                {
-                    Transaction? found = null;
-                    foreach(var item in transactions)
-                    {
-                        if (item.Id == parsedId)
-                        {
-                            found=item;
-                            break;
-                            
-                        }
-                    }
-                    if (found == null)
-                    {
-                        Console.Error.WriteLine($"Transaction with ID {parsedId} not found");
-                        Environment.Exit(1);
-                    }
-                    else
-                    {
-                        transactions.Remove(found);
-                        var deleteOptions = new JsonSerializerOptions { WriteIndented = true };
-                        string deleteJson = JsonSerializer.Serialize(transactions, deleteOptions);
-                        File.WriteAllText(dataFile, deleteJson);
-                        Console.WriteLine($"Deleted transaction ID {parsedId}");
-                        
-                    }
-                    
 
+                var found = store.FindById(parsedId);
+                 if (found == null)
+                {
+                    Console.Error.WriteLine($"Transaction with ID {parsedId} not found");
+                    Environment.Exit(1);
                 }
+                store.Delete(parsedId);
+                Console.WriteLine($"Deleted transaction ID {parsedId}");
                 break;
+
             case "edit":
                 string? editId = GetFlagValue(args, "--id");
                 if (!int.TryParse(editId, out int editParsedId))
@@ -222,17 +166,8 @@ public class Program
                     Console.Error.WriteLine("Invalid or missing ID");
                     Environment.Exit(1);
                 }
-                Transaction? editfound = null;
-                foreach(var item in transactions)
-                {
-                    if (item.Id == editParsedId)
-                    {
-                        editfound=item;
-                        break;
-                            
-                    }
-                }
-                if (editfound == null)
+                var editfound=store.FindById(editParsedId);
+                if (editfound==null)
                 {
                     Console.Error.WriteLine($"Transaction with ID {editParsedId} not found");
                     Environment.Exit(1);
@@ -285,16 +220,11 @@ public class Program
                                 editfound.Date=newDate;
                         }
 
-                        // Save to file and print confirmation
-                        var deleteOptions = new JsonSerializerOptions { WriteIndented = true };
-                        string deleteJson = JsonSerializer.Serialize(transactions, deleteOptions);
-                        File.WriteAllText(dataFile, deleteJson);
                         Console.WriteLine($"Edited transaction ID {editParsedId}");
                         
                     }
+                    store.Save();
                     break;
-
-
 
             default:
                 Console.Error.WriteLine($"Unknown command: '{command}'. Run 'help' for usage.");

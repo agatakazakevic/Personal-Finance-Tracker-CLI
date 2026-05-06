@@ -1,18 +1,26 @@
 [
   {
     "Id": 1,
-    "Amount": 45.50,
+    "Amount": 10,
     "Category": "Food",
-    "Description": "Groceries",
-    "Type": "expense",
-    "Date": "2026-05-02"
+    "Description": "First",
+    "Type": "Expense",
+    "Date": "2026-05-06"
   },
   {
     "Id": 2,
-    "Amount": 2500,
-    "Category": "Salary",
-    "Description": "Monthly salary",
-    "Type": "income",
-    "Date": "2026-05-02"
+    "Amount": 20,
+    "Category": "Food",
+    "Description": "Second",
+    "Type": "Expense",
+    "Date": "2026-05-06"
+  },
+  {
+    "Id": 3,
+    "Amount": 40,
+    "Category": "Food",
+    "Description": "Fourth",
+    "Type": "Expense",
+    "Date": "2026-05-06"
   }
 ]
