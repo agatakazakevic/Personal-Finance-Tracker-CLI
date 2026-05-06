@@ -285,8 +285,6 @@ public class Program
                                 editfound.Date=newDate;
                         }
 
-                        // ... same for category, type, date
-
                         // Save to file and print confirmation
                         var deleteOptions = new JsonSerializerOptions { WriteIndented = true };
                         string deleteJson = JsonSerializer.Serialize(transactions, deleteOptions);
