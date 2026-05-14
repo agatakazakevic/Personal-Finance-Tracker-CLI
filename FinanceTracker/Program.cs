@@ -356,8 +356,27 @@ public class Program
                 Console.WriteLine($"  Expenses:  ${summaryExpences:F2}");
                 Console.WriteLine($"  Net:       {summarySign}${Math.Abs(Total):F2}");
 
+                //groupby gives key, then we sleect by that key
+                var groupbycategory=summaryTransactions.Where(t=> t.Type==TransactionType.Expense).
+                GroupBy(t=>t.Category).
+                Select(g=> new{Category=g.Key, Total=g.Sum(t=> t.Amount)}).
+                OrderByDescending(g=> g.Total).ToList();
+            
+                //f1-one decimal place
+                //f2-two decimal place
+                    if (groupbycategory.Count > 0)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("  Top Spending Categories:");
+                    foreach (var g in groupbycategory)
+                    {
+                        decimal percent = (summaryExpences > 0) ? (g.Total / summaryExpences * 100) : 0;
+                        Console.WriteLine($"    {g.Category.PadRight(12)} ${g.Total:F2}   {percent:F1}%");
+                    }
+                }
 
-                
+    Console.WriteLine();
+    break;
 
             default:
                 Console.Error.WriteLine($"Unknown command: '{command}'. Run 'help' for usage.");

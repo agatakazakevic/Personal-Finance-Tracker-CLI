@@ -1,0 +1,29 @@
+{
+  "NextId": 4,
+  "Transactions": [
+    {
+      "Id": 1,
+      "Amount": 2500,
+      "Category": "Salary",
+      "Description": "Pay",
+      "Type": "Income",
+      "Date": "2026-05-14"
+    },
+    {
+      "Id": 2,
+      "Amount": 45,
+      "Category": "Food",
+      "Description": "Groceries",
+      "Type": "Expense",
+      "Date": "2026-05-14"
+    },
+    {
+      "Id": 3,
+      "Amount": 12,
+      "Category": "Transport",
+      "Description": "Bus",
+      "Type": "Expense",
+      "Date": "2026-05-14"
+    }
+  ]
+}
