@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-
+using System.Linq;
 
 public class Program
 {
@@ -85,6 +85,70 @@ public class Program
                 decimal totalIncome = 0;
                 decimal totalExpenses = 0;
                 var transactions = store.GetAll();
+
+
+                string? fromDate = GetFlagValue(args, "--from");
+                string? toDate = GetFlagValue(args, "--to");
+                string? monthFilter = GetFlagValue(args, "--month");
+                string? yearFilter = GetFlagValue(args, "--year");
+                bool thisMonth = args.Contains("--this-month");
+                bool thisYear = args.Contains("--this-year");
+                if (thisMonth)
+                {
+                    var now=DateTime.Now;
+                    fromDate=new DateTime(now.Year, now.Month, 1).ToString("yyyy-MM-dd");
+                    toDate=new DateTime(now.Year, now.Month, DateTime.DaysInMonth(now.Year, now.Month)).ToString("yyyy-MM-dd");
+
+                }
+                if (thisYear)
+                {
+                    var now=DateTime.Now;
+                    fromDate=new DateTime(now.Year, 1, 1).ToString("yyyy-MM-dd");
+                    toDate=new DateTime(now.Year, 12, DateTime.DaysInMonth(now.Year, 12)).ToString("yyyy-mm-dd");
+
+                }
+                if (monthFilter != null)
+                {
+                    var parts = monthFilter.Split('-');
+                    int year = int.Parse(parts[0]);
+                    int month = int.Parse(parts[1]);
+                    fromDate = new DateTime(year, month, 1).ToString("yyyy-MM-dd");
+                    toDate = new DateTime(year, month, DateTime.DaysInMonth(year, month)).ToString("yyyy-MM-dd");
+                }
+                if (yearFilter != null)
+                {
+                    int year = int.Parse(yearFilter);
+                    fromDate = new DateTime(year, 1, 1).ToString("yyyy-MM-dd");
+                    toDate = new DateTime(year, 12, 31).ToString("yyyy-MM-dd");
+                }
+                //need to filter by fromdate and todate; keep only transactions where the date is on or after fromdate
+                if (fromDate != null)
+                {
+                    transactions=transactions.Where(t=>String.Compare(t.Date, fromDate)>=0).ToList();
+                }
+                if (toDate != null)
+                {
+                    transactions=transactions.Where(t=>String.Compare(t.Date, toDate)<=0).ToList();
+                }
+
+                string? typeFilter = GetFlagValue(args, "--type");
+
+                if (typeFilter != null)
+                {
+                    if(Enum.TryParse<TransactionType>(typeFilter, true, out TransactionType parsedtype )){
+
+                    transactions=transactions.Where(t=>t.Type==parsedtype).ToList();
+
+                    }
+                    
+                }
+
+                string? filterCategory = GetFlagValue(args, "--category");
+                if (filterCategory!=null)
+                {
+                    transactions=transactions.Where(t => t.Category.ToLower()==filterCategory.ToLower()).ToList();
+                }
+
                 foreach (var t in transactions)
                 {
                     string prefix;
@@ -225,6 +289,75 @@ public class Program
                     }
                     store.Save();
                     break;
+            case "summary":
+                var summaryTransactions = store.GetAll();
+                string? summaryFrom = GetFlagValue(args, "--from");
+                string? summaryTo = GetFlagValue(args, "--to");
+                string? summaryMonth = GetFlagValue(args, "--month");
+                string? summaryYear = GetFlagValue(args, "--year");
+                bool summaryThisMonth = args.Contains("--this-month");
+                bool summaryThisYear = args.Contains("--this-year");
+
+                if (summaryThisMonth)
+                {
+                    var now = DateTime.Now;
+                    summaryFrom = new DateTime(now.Year, now.Month, 1).ToString("yyyy-MM-dd");
+                    summaryTo = new DateTime(now.Year, now.Month, DateTime.DaysInMonth(now.Year, now.Month)).ToString("yyyy-MM-dd");
+                }
+                if (summaryThisYear)
+                {
+                    var now = DateTime.Now;
+                    summaryFrom = new DateTime(now.Year, 1, 1).ToString("yyyy-MM-dd");
+                    summaryTo = new DateTime(now.Year, 12, 31).ToString("yyyy-MM-dd");
+                }
+                if (summaryMonth != null)
+                {
+                    var parts = summaryMonth.Split('-');
+                    int year = int.Parse(parts[0]);
+                    int month = int.Parse(parts[1]);
+                    summaryFrom = new DateTime(year, month, 1).ToString("yyyy-MM-dd");
+                    summaryTo = new DateTime(year, month, DateTime.DaysInMonth(year, month)).ToString("yyyy-MM-dd");
+                }
+                if (summaryYear != null)
+                {
+                    int year = int.Parse(summaryYear);
+                    summaryFrom = new DateTime(year, 1, 1).ToString("yyyy-MM-dd");
+                    summaryTo = new DateTime(year, 12, 31).ToString("yyyy-MM-dd");
+                }
+                if (summaryFrom != null)
+                {
+                    summaryTransactions = summaryTransactions
+                        .Where(t => string.Compare(t.Date, summaryFrom) >= 0)
+                        .ToList();
+                }
+                if (summaryTo != null)
+                {
+                    summaryTransactions = summaryTransactions
+                        .Where(t => string.Compare(t.Date, summaryTo) <= 0)
+                        .ToList();
+                }
+                decimal summaryIncome=0;
+                decimal summaryExpences=0;
+
+                foreach(var t in summaryTransactions)
+                {
+                    if (t.Type == TransactionType.Income)
+                        summaryIncome += t.Amount;
+                    else
+                        summaryExpences += t.Amount;
+                }
+                decimal Total= 0;
+                Total=summaryIncome-summaryExpences;
+                string summarySign = Total >= 0 ? "+" : "-";
+                Console.WriteLine();
+                Console.WriteLine("  Summary");
+                Console.WriteLine("  ==================");
+                Console.WriteLine($"  Income:    ${summaryIncome:F2}");
+                Console.WriteLine($"  Expenses:  ${summaryExpences:F2}");
+                Console.WriteLine($"  Net:       {summarySign}${Math.Abs(Total):F2}");
+
+
+                
 
             default:
                 Console.Error.WriteLine($"Unknown command: '{command}'. Run 'help' for usage.");
