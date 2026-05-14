@@ -36,7 +36,23 @@ public class Program
             return;
         }
         string command = args[0].ToLower();
-        var store = new TransactionStore("transactions.json");
+        //load config.json
+        string configFile="config.json";
+        Config config;
+
+        if (File.Exists(configFile))
+        {
+            string configJson=File.ReadAllText(configFile); //raw json file
+            config=JsonSerializer.Deserialize<Config>(configJson)?? new Config();//turn into config file
+        }
+        else
+        {
+            config = new Config();
+        }
+
+
+
+        var store = new TransactionStore(config.DataFilePath);
         switch (command)
         {
             

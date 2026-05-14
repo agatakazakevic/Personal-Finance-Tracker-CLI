@@ -1,0 +1,15 @@
+{
+  "categories": {
+    "expense": ["Food", "Transport", "Utilities", "Entertainment", "Health"],
+    "income": ["Salary", "Freelance", "Investments"]
+  },
+  "budgets": {
+    "Food": 100.00,
+    "Transport": 50.00,
+    "Utilities": 90.00,
+    "Entertainment": 75.00,
+    "Health": 60.00
+  },
+  "budgetWarningThreshold": 0.75,
+  "dataFilePath": "./transactions.json"
+}
