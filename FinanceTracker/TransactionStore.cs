@@ -51,6 +51,7 @@ public class TransactionStore
 
     public void Save()
     {
+        try{
         var data = new StoreData
         {
             NextId = nextId,
@@ -58,6 +59,13 @@ public class TransactionStore
         };
         string json = JsonSerializer.Serialize(data, jsonOptions);
         File.WriteAllText(dataFile, json);
+        }
+
+        catch(IOException ex)
+        {
+            Console.Error.WriteLine($"Error saving to {dataFile}: {ex.Message}");
+            Console.Error.WriteLine("Your changes may not have been saved.");
+        }
 
     }
 
@@ -65,11 +73,24 @@ public class TransactionStore
     {
         if (File.Exists(dataFile))
         {
+            try
+            {
             string json = File.ReadAllText(dataFile);
             var result = JsonSerializer.Deserialize<StoreData>(json, jsonOptions);
+
+
             if (result != null){
                 transactions = result.Transactions;
                 nextId = result.NextId;
+            }
+            }
+            catch(JsonException)
+            {
+                Console.Error.WriteLine($"Warning: {dataFile} contains invalid JSON. ");
+            }
+            catch (IOException ex)
+            {
+                Console.Error.WriteLine($"Error reading {dataFile}: {ex.Message}");
             }
         }
     }
