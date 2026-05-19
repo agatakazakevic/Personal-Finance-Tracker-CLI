@@ -43,7 +43,8 @@ public class Program
         if (File.Exists(configFile))
         {
             string configJson=File.ReadAllText(configFile); //raw json file
-            config=JsonSerializer.Deserialize<Config>(configJson)?? new Config();//turn into config file
+            var configOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };//for expense-Expense
+            config=JsonSerializer.Deserialize<Config>(configJson, configOptions)?? new Config();//turn into config file
         }
         else
         {
@@ -78,13 +79,51 @@ public class Program
                     if (type == "income")
                     {
                         parsedType = TransactionType.Income;
+
                     }
                     else
                     {
                         parsedType = TransactionType.Expense;
                     }
+                    var allowedCategories = config.Categories[type];
+                    if (!allowedCategories.Contains(category))
+                    {
+                            Console.Error.WriteLine($"Unknown category \"{category}\"");
+                            Console.Error.WriteLine($"Known categories: {string.Join(", ", allowedCategories)}");
+                            Console.Error.WriteLine("Add it to config.json to use it.");
+                            Environment.Exit(1);
+                    }
+
+                    
+
+
                     var transaction = new Transaction(parsedAmount, category, validDesc, parsedType, date);
                     store.Add(transaction);
+                    var now = DateTime.Now;
+                    string monthStart = new DateTime(now.Year, now.Month, 1).ToString("yyyy-MM-dd");
+                    string monthEnd = new DateTime(now.Year, now.Month, DateTime.DaysInMonth(now.Year, now.Month)).ToString("yyyy-MM-dd");
+
+                    if (config.Budgets.ContainsKey(category))
+                    {
+                        decimal budget = config.Budgets[category];
+                        decimal spent = store.GetAll()
+                        .Where(t => t.Category == category)
+                        .Where(t => t.Type == TransactionType.Expense)
+                        .Where(t => string.Compare(t.Date, monthStart) >= 0)
+                        .Where(t => string.Compare(t.Date, monthEnd) <= 0)
+                        .Sum(t => t.Amount);
+                
+                        decimal percent = spent / budget;
+                        if (percent > 1)
+                        {
+                            Console.WriteLine($"Budget exceeded: {category} is at {percent * 100:F0}%");
+                        }
+                        else if (percent >= config.BudgetWarningThreshold)
+                        {
+                            Console.WriteLine($"⚠ Budget warning: {category} is at {percent * 100:F0}% ");
+                        }
+                    }
+                    
                     Console.WriteLine($"Amount: {parsedAmount} | Category: {category} | Desc: {validDesc} | Type: {type} | Date: {date}");
                 }
                 catch (ArgumentException ex)
@@ -120,7 +159,7 @@ public class Program
                 {
                     var now=DateTime.Now;
                     fromDate=new DateTime(now.Year, 1, 1).ToString("yyyy-MM-dd");
-                    toDate=new DateTime(now.Year, 12, DateTime.DaysInMonth(now.Year, 12)).ToString("yyyy-mm-dd");
+                    toDate=new DateTime(now.Year, 12, DateTime.DaysInMonth(now.Year, 12)).ToString("yyyy-MM-dd");
 
                 }
                 if (monthFilter != null)
@@ -238,6 +277,73 @@ public class Program
                 store.Delete(parsedId);
                 Console.WriteLine($"Deleted transaction ID {parsedId}");
                 break;
+            case "budget":
+
+                var budgetNow=DateTime.Now;
+                string budgetstart=new DateTime(budgetNow.Year, budgetNow.Month, 1).ToString("yyyy-MM-dd");
+                string budgetend=new DateTime(budgetNow.Year, budgetNow.Month,DateTime.DaysInMonth(budgetNow.Year, budgetNow.Month)).ToString("yyyy-MM-dd");
+                var budgetTransactions=store.GetAll().
+                Where(t=>t.Type==TransactionType.Expense).
+                Where(t=>String.Compare(t.Date, budgetstart)>=0).
+                Where(t=>String.Compare(t.Date, budgetend)<=0).ToList();
+                
+                string? budgetCategory = GetFlagValue(args, "--category");
+                if (budgetCategory != null)
+                {
+                    decimal budgetforthecategory=config.Budgets[budgetCategory];
+                    var budgetransactionsbycategory=budgetTransactions.Where(t=>t.Category==budgetCategory).ToList();
+                    var spendamount=budgetransactionsbycategory.Sum(t=> t.Amount);
+                    Console.WriteLine();
+                    Console.WriteLine($"  {budgetCategory} — Budget");
+                    Console.WriteLine("  ==================");
+                    Console.WriteLine($"  Budget:  ${budgetforthecategory:F2}");
+                    Console.WriteLine($"  Spent:   ${spendamount:F2}");
+                    if (spendamount > budgetforthecategory)
+                    {
+                        Console.WriteLine($"  Status:  ⚠ Over by ${spendamount - budgetforthecategory:F2}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"  Status:  ${budgetforthecategory - spendamount:F2} remaining");
+                    }
+                    Console.WriteLine();
+                    Console.WriteLine("  Transactions:");
+                    foreach (var t in budgetransactionsbycategory)
+                    {
+                        Console.WriteLine($"    {t.Date}  ${t.Amount:F2}  {t.Description}");
+                    }
+                }
+                else
+                {
+                    // we need to loop through all budgets
+                    Console.WriteLine();
+                    Console.WriteLine("  Budgets");
+                    Console.WriteLine("  ==================");
+
+                    foreach (var b in config.Budgets)
+                    {
+                        decimal spent = budgetTransactions
+                        .Where(t => t.Category == b.Key)
+                        .Sum(t => t.Amount);
+                        decimal budget = b.Value;
+                        decimal percent = budget > 0 ? spent / budget : 0;
+
+                        int filled = (int)(percent * 20);
+                        if (filled > 20) filled = 20;
+                        string bar = new string('█', filled) + new string('░', 20 - filled);
+
+                        string status = "";
+                        if (percent > 1)
+                            status = "⚠ Over the budger";
+                        else if (percent >= config.BudgetWarningThreshold)
+                            status = "⚠ Near limit!";
+
+                        Console.WriteLine($"  {b.Key.PadRight(12)} ${spent:F2} / ${budget:F2}  {bar}  {percent * 100:F0}% {status}");
+                    }
+                }
+
+                Console.WriteLine();
+                break;
 
             case "edit":
                 string? editId = GetFlagValue(args, "--id");
@@ -260,7 +366,6 @@ public class Program
                         string? newDesc = GetFlagValue(args, "--desc");
                         string? newType = GetFlagValue(args, "--type");
                         string? newDate = GetFlagValue(args, "--date");
-
                         if (newAmount != null)
                         {
                             if (!decimal.TryParse(newAmount, out decimal newAmountParsed))
@@ -270,6 +375,7 @@ public class Program
                                 }
                             else
                             {
+                                
                                 editfound.Amount=newAmountParsed;
                             }
 
@@ -281,7 +387,18 @@ public class Program
                         }
                         if (newCategory != null)
                         {
-                                editfound.Category=newCategory;
+                                //current type
+                                string typeStr = editfound.Type == TransactionType.Income ? "income" : "expense";
+                                var allowedCategories = config.Categories[typeStr];
+                                if (!allowedCategories.Contains(newCategory))
+                                {
+                                    Console.Error.WriteLine($"Unknown category \"{newCategory}\" for type {typeStr}.");
+                                    Console.Error.WriteLine($"Known categories: {string.Join(", ", allowedCategories)}");
+                                    Console.Error.WriteLine("Add it to config.json to use it.");
+                                    Environment.Exit(1);
+                                }
+                                editfound.Category = newCategory;
+
                         }
                         if (newType != null)
                         {
@@ -301,9 +418,33 @@ public class Program
                         }
 
                         Console.WriteLine($"Edited transaction ID {editParsedId}");
-                        
-                    }
+                        var now = DateTime.Now;
+                    string monthStart = new DateTime(now.Year, now.Month, 1).ToString("yyyy-MM-dd");
+                    string monthEnd = new DateTime(now.Year, now.Month, DateTime.DaysInMonth(now.Year, now.Month)).ToString("yyyy-MM-dd");
+                    string editCategory = editfound.Category;
+                    if (config.Budgets.ContainsKey(editCategory))
+                        {
+                            decimal budget = config.Budgets[editCategory];
+                            decimal spent = store.GetAll()
+                            .Where(t => t.Category == editCategory)
+                            .Where(t => t.Type == TransactionType.Expense)
+                            .Where(t => string.Compare(t.Date, monthStart) >= 0)
+                            .Where(t => string.Compare(t.Date, monthEnd) <= 0)
+                            .Sum(t => t.Amount);
+                            
+                            decimal percent = spent / budget;
+                                if (percent > 1)
+                                {
+                                    Console.WriteLine($"Budget exceeded: {editCategory} is at {percent * 100:F0}%");
+                                }
+                                else if (percent >= config.BudgetWarningThreshold)
+                                {
+                                    Console.WriteLine($"⚠ Budget warning: {editCategory} is at {percent * 100:F0}% ");
+                                }
+                                }
                     store.Save();
+                    }
+                    
                     break;
             case "summary":
                 var summaryTransactions = store.GetAll();
