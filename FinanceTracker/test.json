@@ -1,0 +1,26 @@
+[
+  {
+    "Id": 1,
+    "Amount": 78,
+    "Category": "Food",
+    "Description": "Weekly shop",
+    "Type": "Expense",
+    "Date": "2026-05-19"
+  },
+  {
+    "Id": 2,
+    "Amount": 25,
+    "Category": "Food",
+    "Description": "Takeout",
+    "Type": "Expense",
+    "Date": "2026-05-19"
+  },
+  {
+    "Id": 3,
+    "Amount": 12,
+    "Category": "Transport",
+    "Description": "Bus",
+    "Type": "Expense",
+    "Date": "2026-05-19"
+  }
+]

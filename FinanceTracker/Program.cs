@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Linq;
+using System.Text;
 
 public class Program
 {
@@ -146,8 +147,12 @@ public class Program
                 string? toDate = GetFlagValue(args, "--to");
                 string? monthFilter = GetFlagValue(args, "--month");
                 string? yearFilter = GetFlagValue(args, "--year");
+                string? search = GetFlagValue(args, "--search");
                 bool thisMonth = args.Contains("--this-month");
                 bool thisYear = args.Contains("--this-year");
+                
+
+
                 if (thisMonth)
                 {
                     var now=DateTime.Now;
@@ -202,6 +207,10 @@ public class Program
                 if (filterCategory!=null)
                 {
                     transactions=transactions.Where(t => t.Category.ToLower()==filterCategory.ToLower()).ToList();
+                }
+                if (search != null)
+                {
+                    transactions=transactions.Where(t=>t.Description.ToLower().Contains(search.ToLower())).ToList();
                 }
 
                 foreach (var t in transactions)
@@ -532,8 +541,43 @@ public class Program
                     }
                 }
 
-    Console.WriteLine();
-    break;
+            Console.WriteLine();
+            break;
+
+            case "export":
+                string? format = GetFlagValue(args, "--format");
+                string? output = GetFlagValue(args, "--output");
+                if (format == null || output == null)
+                {
+                    Console.Error.WriteLine("Both --format and --output are required");
+                    Environment.Exit(1);
+                }
+                var exportTransactions=store.GetAll();
+                if (format=="csv"){
+                    var csv=new StringBuilder();
+                    csv.Append("Id,Date,Type,Category,Amount,Description");
+                    foreach (var t in exportTransactions)
+                        {
+                            string descrip = t.Description.Contains(',') ? $"\"{t.Description}\"" : t.Description;
+                            csv.AppendLine( $"{t.Id},{t.Date},{t.Type},{t.Category},{t.Amount},{descrip}\n");
+                        }
+                    File.WriteAllText(output, csv.ToString());
+                    Console.WriteLine($"Exported to {output}");
+                }
+
+                else if (format == "json")
+                {
+                    var jsonOptions = new JsonSerializerOptions { WriteIndented = true , Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }};
+                    string json = JsonSerializer.Serialize(exportTransactions, jsonOptions);
+                    File.WriteAllText(output, json);
+                    Console.WriteLine($"Exported to {output}");
+                }
+                else
+                {
+                    Console.Error.WriteLine("Invalid format. Use 'csv' or 'json'");
+                    Environment.Exit(1);
+                }
+                break;
 
             default:
                 Console.Error.WriteLine($"Unknown command: '{command}'. Run 'help' for usage.");

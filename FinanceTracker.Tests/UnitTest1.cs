@@ -1,5 +1,5 @@
 ﻿namespace FinanceTracker.Tests;
-
+using System.Linq;
 public class Tests
 {
     [SetUp]
@@ -206,6 +206,124 @@ public class Tests
         var store = new TransactionStore(tempFile);
         Assert.That(store.GetAll().Count, Is.EqualTo(0));
         File.Delete(tempFile);
+    }
+    [Test]
+    public void Store_FilterByCategory()
+    {
+        string tempFile = Path.GetTempFileName();
+        var store = new TransactionStore(tempFile);
+        store.Add(new Transaction(10, "Food", "Lunch", TransactionType.Expense, "2026-05-01"));
+        store.Add(new Transaction(20, "Transport", "Bus", TransactionType.Expense, "2026-05-01"));
+        store.Add(new Transaction(30, "Food", "Dinner", TransactionType.Expense, "2026-05-01"));
+
+        var filtered = store.GetAll()
+            .Where(t => t.Category.ToLower() == "food")
+            .ToList();
+
+        Assert.That(filtered.Count, Is.EqualTo(2));
+        File.Delete(tempFile);
+    }
+
+    [Test]
+    public void Store_FilterByDateRange()
+    {
+        string tempFile = Path.GetTempFileName();
+        var store = new TransactionStore(tempFile);
+        store.Add(new Transaction(10, "Food", "Jan", TransactionType.Expense, "2026-01-15"));
+        store.Add(new Transaction(20, "Food", "May", TransactionType.Expense, "2026-05-10"));
+        store.Add(new Transaction(30, "Food", "Dec", TransactionType.Expense, "2026-12-01"));
+
+        var filtered = store.GetAll()
+            .Where(t => string.Compare(t.Date, "2026-05-01") >= 0)
+            .Where(t => string.Compare(t.Date, "2026-05-31") <= 0)
+            .ToList();
+
+        Assert.That(filtered.Count, Is.EqualTo(1));
+        Assert.That(filtered[0].Description, Is.EqualTo("May"));
+        File.Delete(tempFile);
+    }
+
+    [Test]
+    public void Store_FilterByType()
+    {
+        string tempFile = Path.GetTempFileName();
+        var store = new TransactionStore(tempFile);
+        store.Add(new Transaction(100, "Food", "Lunch", TransactionType.Expense, "2026-05-01"));
+        store.Add(new Transaction(2500, "Salary", "Pay", TransactionType.Income, "2026-05-01"));
+
+        var incomeOnly = store.GetAll()
+            .Where(t => t.Type == TransactionType.Income)
+            .ToList();
+
+        Assert.That(incomeOnly.Count, Is.EqualTo(1));
+        Assert.That(incomeOnly[0].Category, Is.EqualTo("Salary"));
+        File.Delete(tempFile);
+    }
+
+    [Test]
+    public void Summary_CalculatesTotalsCorrectly()
+    {
+        string tempFile = Path.GetTempFileName();
+        var store = new TransactionStore(tempFile);
+        store.Add(new Transaction(2500, "Salary", "Pay", TransactionType.Income, "2026-05-01"));
+        store.Add(new Transaction(45, "Food", "Groceries", TransactionType.Expense, "2026-05-01"));
+        store.Add(new Transaction(12, "Transport", "Bus", TransactionType.Expense, "2026-05-01"));
+
+        var all = store.GetAll();
+        decimal income = all.Where(t => t.Type == TransactionType.Income).Sum(t => t.Amount);
+        decimal expenses = all.Where(t => t.Type == TransactionType.Expense).Sum(t => t.Amount);
+
+        Assert.That(income, Is.EqualTo(2500));
+        Assert.That(expenses, Is.EqualTo(57));
+        Assert.That(income - expenses, Is.EqualTo(2443));
+        File.Delete(tempFile);
+    }
+
+    [Test]
+    public void Config_RejectsUnknownCategory()
+    {
+        var categories = new List<string> { "Food", "Transport", "Utilities" };
+        Assert.That(categories.Contains("Hobbies"), Is.False);
+        Assert.That(categories.Contains("Food"), Is.True);
+    }
+
+    [Test]
+    public void Budget_CalculatesPercentCorrectly()
+    {
+        decimal budget = 100m;
+        decimal spent = 75m;
+        decimal percent = spent / budget;
+        Assert.That(percent, Is.EqualTo(0.75m));
+    }
+
+    [Test]
+    public void Budget_DetectsOverBudget()
+    {
+        decimal budget = 100m;
+        decimal spent = 103m;
+        decimal percent = spent / budget;
+        Assert.That(percent > 1, Is.True);
+    }
+
+    [Test]
+    public void Budget_DetectsNearLimit()
+    {
+        decimal budget = 100m;
+        decimal spent = 78m;
+        decimal threshold = 0.75m;
+        decimal percent = spent / budget;
+        Assert.That(percent >= threshold, Is.True);
+        Assert.That(percent <= 1, Is.True);
+    }
+
+    [Test]
+    public void Budget_UnderThresholdNoWarning()
+    {
+        decimal budget = 100m;
+        decimal spent = 20m;
+        decimal threshold = 0.75m;
+        decimal percent = spent / budget;
+        Assert.That(percent < threshold, Is.True);
     }
 }
 
