@@ -325,5 +325,90 @@ public class Tests
         decimal percent = spent / budget;
         Assert.That(percent < threshold, Is.True);
     }
+
+    [Test]
+
+    public void Export_CsvFormat()
+    {
+        string tempFile=Path.GetTempFileName();
+        var store = new TransactionStore(tempFile);
+        store.Add(new Transaction(50, "Food", "Groceries", TransactionType.Expense, "2026-05-27"));
+        store.Add(new Transaction(2500, "Salary", "Pay", TransactionType.Income, "2026-05-27"));
+
+        var csv = new System.Text.StringBuilder();
+        csv.AppendLine("Id,Date,Type,Category,Amount,Description");
+        foreach (var t in store.GetAll())
+        {
+            csv.AppendLine($"{t.Id},{t.Date},{t.Type},{t.Category},{t.Amount},{t.Description}");
+        }
+
+        string result = csv.ToString();
+        Assert.That(result, Does.Contain("Id,Date,Type,Category,Amount,Description"));
+        Assert.That(result, Does.Contain("Food"));
+        Assert.That(result, Does.Contain("Salary"));
+        File.Delete(tempFile);
+
+    }
+    [Test]
+    public void Export_CsvEscapesCommas()
+    {
+        string tempFile = Path.GetTempFileName();
+        var store = new TransactionStore(tempFile);
+        store.Add(new Transaction(50, "Food", "Rice, beans, and chicken", TransactionType.Expense, "2026-05-19"));
+
+        var t = store.GetAll()[0];
+        string desc = t.Description.Contains(',') ? $"\"{t.Description}\"" : t.Description;
+
+        Assert.That(desc, Is.EqualTo("\"Rice, beans, and chicken\""));
+        File.Delete(tempFile);
+    }
+
+    [Test]
+    public void Export_JsonFormat()
+    {
+        string tempFile = Path.GetTempFileName();
+        var store = new TransactionStore(tempFile);
+        store.Add(new Transaction(50, "Food", "Groceries", TransactionType.Expense, "2026-05-19"));
+
+        var options = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
+        string json = System.Text.Json.JsonSerializer.Serialize(store.GetAll(), options);
+
+        Assert.That(json, Does.Contain("Food"));
+        Assert.That(json, Does.Contain("Groceries"));
+        Assert.That(json, Does.Contain("50"));
+        File.Delete(tempFile);
+    }
+
+    [Test]
+    public void Search_FiltersByDescription()
+    {
+        string tempFile = Path.GetTempFileName();
+        var store = new TransactionStore(tempFile);
+        store.Add(new Transaction(50, "Food", "Weekly shop", TransactionType.Expense, "2026-05-19"));
+        store.Add(new Transaction(25, "Food", "Takeout", TransactionType.Expense, "2026-05-19"));
+
+        var results = store.GetAll()
+            .Where(t => t.Description.ToLower().Contains("shop"))
+            .ToList();
+
+        Assert.That(results.Count, Is.EqualTo(1));
+        Assert.That(results[0].Description, Is.EqualTo("Weekly shop"));
+        File.Delete(tempFile);
+    }
+
+    [Test]
+    public void Search_CaseInsensitive()
+    {
+        string tempFile = Path.GetTempFileName();
+        var store = new TransactionStore(tempFile);
+        store.Add(new Transaction(50, "Food", "Weekly Shop", TransactionType.Expense, "2026-05-19"));
+
+        var results = store.GetAll()
+            .Where(t => t.Description.ToLower().Contains("shop"))
+            .ToList();
+
+        Assert.That(results.Count, Is.EqualTo(1));
+        File.Delete(tempFile);
+    }
 }
 
