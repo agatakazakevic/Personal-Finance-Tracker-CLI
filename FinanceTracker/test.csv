@@ -1,4 +1,8 @@
-Id,Date,Type,Category,Amount,Description
-1,2026-05-19,Expense,Food,78,Weekly shop
-2,2026-05-19,Expense,Food,25,Takeout
-3,2026-05-19,Expense,Transport,12,Bus
+Id,Date,Type,Category,Amount,Description1,2026-05-01,Income,Salary,2500,Monthly salary
+
+2,2026-05-03,Expense,Food,50,Updated groceries
+
+4,2026-05-10,Expense,Utilities,85,Electricity bill
+
+5,2026-05-15,Expense,Food,32.80,Restaurant
+

@@ -32,9 +32,9 @@ public class Program
     {
         if (args.Length == 0)
         {
-            Console.WriteLine("Please write the command or type help");
+            Console.WriteLine("Please write the command");
+            args = new string[] { "help" };
 
-            return;
         }
         string command = args[0].ToLower();
         //load config.json
@@ -89,15 +89,13 @@ public class Program
                     var allowedCategories = config.Categories[type];
                     if (!allowedCategories.Contains(category))
                     {
-                            Console.Error.WriteLine($"Unknown category \"{category}\"");
+                            Console.Error.WriteLine($"Unknown category {category}");
                             Console.Error.WriteLine($"Known categories: {string.Join(", ", allowedCategories)}");
                             Console.Error.WriteLine("Add it to config.json to use it.");
                             Environment.Exit(1);
                     }
 
-                    
-
-
+                
                     var transaction = new Transaction(parsedAmount, category, validDesc, parsedType, date);
                     store.Add(transaction);
                     var now = DateTime.Now;
